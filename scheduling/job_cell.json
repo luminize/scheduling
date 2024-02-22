@@ -1,0 +1,76 @@
+{
+  "machines": {
+    "m1": "machine 1",
+    "m2": "machine 2",
+    "m3": "machine 3",
+    "m4": "machine 4"
+  },
+  "jobs": {
+    "j1": {
+      "t1": {
+        "name": "task 1.1",
+        "machine": "m1",
+        "processing_time": 10.0,
+        "predecessor": ""
+      },
+      "t2": {
+        "name": "task 1.2",
+        "machine": "m2",
+        "processing_time": 8.0,
+        "predecessor": "t1"
+      },
+      "t3": {
+        "name": "task 1.3",
+        "machine": "m3",
+        "processing_time": 4.0,
+        "predecessor":  "t2"
+      }
+    },
+    "j2": {
+      "t1": {
+        "name": "task 2.1",
+        "machine": "m2",
+        "processing_time": 8.0,
+        "predecessor": ""
+      },
+      "t2": {
+        "name": "task 2.2",
+        "machine": "m1",
+        "processing_time": 3.0,
+        "predecessor": "t1"
+      },
+      "t3": {
+        "name": "task 2.3",
+        "machine": "m4",
+        "processing_time": 5.0,
+        "predecessor": "t2"
+      },
+      "t4": {
+        "name": "task 2.4",
+        "machine": "m3",
+        "processing_time": 6.0,
+        "predecessor": "t3"
+      }
+    },
+    "j3": {
+      "t1": {
+        "name": "task 3.1",
+        "machine": "m1",
+        "processing_time": 4.0,
+        "predecessor": ""
+      },
+      "t2": {
+        "name": "task 3.2",
+        "machine": "m2",
+        "processing_time": 7.0,
+        "predecessor": "t1"
+      },
+      "t3": {
+        "name": "task 3.3",
+        "machine": "m4",
+        "processing_time": 3.0,
+        "predecessor": "t2"
+      }
+    }
+  }
+ }

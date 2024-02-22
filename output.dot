@@ -1,0 +1,15 @@
+digraph output_graph {
+	U -> j1t1 [weight=0];
+	j2t2 -> j2t3 [weight=-3];
+	j1t1 -> j1t2 [weight=-10];
+	j2t1 -> j2t2 [weight=-8];
+	j2t3 -> j2t4 [weight=-5];
+	j1t2 -> j1t3 [weight=-8];
+	U -> j2t1 [weight=0];
+	U -> j3t1 [weight=0];
+	j3t1 -> j3t2 [weight=-4];
+	j3t2 -> j3t3 [weight=-7];
+	j1t3 -> V [weight=-4];
+	j2t4 -> V [weight=-6];
+	j3t3 -> V [weight=-3];
+}
