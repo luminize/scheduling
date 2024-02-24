@@ -37,6 +37,12 @@ namespace sched {
 		std::vector<sched::task> t;
 	};
 
+	struct machine {
+		std::string id;
+		std::string name;
+		std::vector<std::shared_ptr<sched::task>> tasks_on_machine;
+	};
+
 	void from_json(const json& j, task& t) {
 		j.at("name").get_to(t.name);
 		j.at("machine").get_to(t.machine);
@@ -55,11 +61,14 @@ int main()
 	//std::cout << "there are " << n_machines << " machines" << std::endl;
     //std::cout << "there are " << n_jobs << " jobs" << std::endl;
 
-	std::vector<std::string> machinelist;
+	std::vector<sched::machine> machinelist;
 	auto j_machines = data["machines"];
     for (auto m : data["machines"].items())
     {
-		machinelist.push_back(m.key());
+		sched::machine machine;
+		machine.id = m.key();
+		machine.name = m.value();
+		machinelist.push_back(machine);
     }
 
 	auto j_jobs = data["jobs"];
@@ -125,6 +134,18 @@ int main()
 	CXXGraph::id_t edge_iterator = 1;
 
 	for (auto& t : tasklist) {
+
+		// first, check on which machine this task should run
+		bool machine_found = false;
+		int machine_iterator = 0;
+		while ((machine_iterator < machinelist.size()) && (!machine_found) ) {
+			if (machinelist[machine_iterator].id == t.machine) {
+				machinelist[machine_iterator].tasks_on_machine.push_back(make_shared<sched::task>(t));
+				machine_found = true;
+			}
+			machine_iterator++;
+		}
+
 		// if no predecessor, then edge from taskU node
 		// get task id to search for in the nodelist
 		std::string current_task_id = t.id;
@@ -201,14 +222,72 @@ int main()
 	for (auto e : edgelist) {
 		e.setWeight(e.getWeight() * -1.0);
 		edgeSet2.insert(make_shared<CXXGraph::DirectedWeightedEdge<int>>(e));
-		//std::cout << e.getNodePair().first.get()->getUserId()
-		//	<< " --- " << e.getWeight()
-		//	<< " --> " << e.getNodePair().second.get()->getUserId() << std::endl;
-		//std::cout << e << std::endl;
 	}
 	CXXGraph::Graph<int> graph2(edgeSet2);
 	auto bf2 = graph2.bellmanford(nodeU, nodeV);
+	double crit_path_length = bf2.result;
 	graph2.writeToDotFile("C:\\repos\\scheduling", "output", "output_graph");
+
+	auto dist = graph.getAdjMatrix();
+	auto eul = graph.getLaplacianMatrix();
+	auto trans = graph.getTransitionMatrix();
+	auto deg = graph.getDegreeMatrix();
+
+
+	auto mst = graph.kruskal();
+	auto bor = graph2.boruvka();
+	
+	auto ns1 = graph2.getNodeSet();
+	std::cout << "ns1 : " << ns1.size() << std::endl;
+	std::cout << "es2 : " << edgeSet2.size() << std::endl;
+
+	std::vector<std::string> endnodes_queue;
+	// first get all the nodes pointing to the end node
+	endnodes_queue.push_back(nodeV.getUserId());
+	for (auto es:graph2.getEdgeSet()) {
+		if (es.get()->getNodePair().second.get()->getData() == nodeV.getData()) {
+			auto w_1 = nodelist[es.get()->getNodePair().first.get()->getData()];
+			endnodes_queue.push_back(w_1.getUserId());
+			std::cout << w_1 << std::endl;
+		}
+	}
+
+	endnodes_queue.erase(endnodes_queue.begin());
+
+	auto ns2 = graph2.getNodeSet();
+	std::cout << "ns2 : " << ns2.size() << std::endl;
+	std::cout << "es2 : " << edgeSet2.size() << std::endl;
+
+	// find the node graph_id from tasklist by looking up UserId
+	// use that to get the node from the nodelist
+	// have a shortest path to that node
+	// use its weight to add to the result to check if it
+	// is on the critical path
+
+	std::vector<std::string> copy_endnodes_queue = endnodes_queue;
+	for (auto curr_node : ns2) {
+		auto curr_node_user_id = curr_node.get()->getUserId();
+		for (int i = 0; i < copy_endnodes_queue.size(); i++) {
+			if (curr_node_user_id == copy_endnodes_queue[i]) {
+				CXXGraph::Node<int> temp_node("", 0);
+				double length_to_node = 0;
+				double temp_processing_time = 0;
+				for (auto t : tasklist) {
+					if (t.id == curr_node_user_id) {
+						temp_node = nodelist[t.graph_id];
+						temp_processing_time = -1.0 * t.processing_time;
+					}
+				}
+				auto bfres = graph2.bellmanford(nodeU, temp_node);
+				std::cout << std::endl << copy_endnodes_queue[i] << bfres.result << std::endl;
+				if ((bfres.result + temp_processing_time) <= crit_path_length) {
+					std::cout << bfres.result << " + " << temp_processing_time << " <= " << crit_path_length << std::endl;
+					std::cout << copy_endnodes_queue[i] << " can be on critical path!" << std::endl;
+				}
+				copy_endnodes_queue.erase(copy_endnodes_queue.begin() + i);
+			}
+		}
+	}
 
 	std::cout << "Done";
     return 0;
