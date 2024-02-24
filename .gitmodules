@@ -1,0 +1,3 @@
+[submodule "include/CXXGraph"]
+	path = include/CXXGraph
+	url = https://github.com/luminize/CXXGraph.git
