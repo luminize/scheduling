@@ -10,6 +10,17 @@
 using std::make_shared;
 using json = nlohmann::json;
 
+// Driver function to sort the vector elements
+// by second element of pairs
+bool sortbysec(const std::pair<std::string, double>& a,
+	const std::pair<std::string, double>& b)
+{
+	return (a.second < b.second);
+}
+
+
+
+
 
 /* json layout
 "name": "task 1.1",
@@ -50,6 +61,41 @@ namespace sched {
 		j.at("predecessor").get_to(t.predecessor);
 	}
 } // namespace sched
+
+std::vector<CXXGraph::shared<const CXXGraph::Edge<int>>> find_edges(CXXGraph::shared<const CXXGraph::Node<int>> target_node, CXXGraph::T_EdgeSet<int> &edgeSet, bool incoming) {
+	std::vector<CXXGraph::shared<const CXXGraph::Edge<int>>> edges{};
+	CXXGraph::shared<const CXXGraph::Node<int>> temp_node;
+	for (auto& e : edgeSet) {
+		auto edge = e.get();
+		if (incoming) {
+			temp_node = edge->getNodePair().second;
+		}
+		else {
+			temp_node = edge->getNodePair().first;
+		}
+		if (temp_node == target_node) {
+			edges.push_back(e);
+		}
+	}
+	return edges;
+}
+
+std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> find_node_connections(CXXGraph::Graph<int>& graph, int nr_of_edges, bool incoming) {
+	std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> node_list{};
+	auto edges = graph.getEdgeSet();
+	auto nodes = graph.getNodeSet();
+	// for each node, look if there is exactly one node as second in the nodepair
+	// if that is the case at the end of the loop thru the edges, add that node to
+	// the vector.
+	for (auto n : nodes) {
+		CXXGraph::shared<const CXXGraph::Node<int>> temp_node = n;
+		auto edges_vector = find_edges(temp_node, edges, incoming);
+		if (edges_vector.size() == nr_of_edges) {
+			node_list.push_back(n);
+		}
+	}
+	return node_list;
+}
 
 int main()
 {
@@ -233,7 +279,6 @@ int main()
 	auto trans = graph.getTransitionMatrix();
 	auto deg = graph.getDegreeMatrix();
 
-
 	auto mst = graph.kruskal();
 	auto bor = graph2.boruvka();
 	
@@ -280,14 +325,58 @@ int main()
 				}
 				auto bfres = graph2.bellmanford(nodeU, temp_node);
 				std::cout << std::endl << copy_endnodes_queue[i] << bfres.result << std::endl;
-				if ((bfres.result + temp_processing_time) <= crit_path_length) {
-					std::cout << bfres.result << " + " << temp_processing_time << " <= " << crit_path_length << std::endl;
+				if ((bfres.result + temp_processing_time) == crit_path_length) {
+					std::cout << bfres.result << " + " << temp_processing_time << " == " << crit_path_length << std::endl;
 					std::cout << copy_endnodes_queue[i] << " can be on critical path!" << std::endl;
 				}
 				copy_endnodes_queue.erase(copy_endnodes_queue.begin() + i);
 			}
 		}
 	}
+
+	// if we have the result of the critical path, we can find the path by copying
+	// everything with a value < 0.
+	// Working backwards from V towards U.
+	// when a node has 1 predecessor, consume that node
+	// Everywhere that there is a node which has more than 1 precesessor nodes, check that
+	// the value of predecessor + weight equal the current value of the node.
+	// if that is true for more than one, copy the current backwards path, and consume the
+	// nodes from that path.
+
+	/*
+	result	-22.500000000000000	double
+
+	[0]	("U", 0.0000000000000000)		std::pair<std::string,double>
+	[1]	("j2t2", -8.0000000000000000)	std::pair<std::string,double>
+	[2]	("j2t1", 0.0000000000000000)	std::pair<std::string,double>
+	[3]	("j1t1", 0.0000000000000000)	std::pair<std::string,double>
+	[4]	("j2t3", -11.000000000000000)	std::pair<std::string,double>
+	[5]	("j1t2", -10.000000000000000)	std::pair<std::string,double>
+	[6]	("U", 0.0000000000000000)		std::pair<std::string,double>
+	[7]	("U", 0.0000000000000000)		std::pair<std::string,double>
+	[8]	("j3t1", 0.0000000000000000)	std::pair<std::string,double>
+	[9]	("j3t2", -4.0000000000000000)	std::pair<std::string,double>
+	[10]("j1t3", -18.000000000000000)	std::pair<std::string,double>
+	[11]("j2t4", -16.000000000000000)	std::pair<std::string,double>
+	[12]("j3t3", -11.000000000000000)	std::pair<std::string,double>
+	*/
+
+	std::vector<std::stack<std::string>> paths;
+	std::vector<std::pair<std::string, double>> results{};
+
+	results = bf2.node_and_value;
+	
+	// https://www.geeksforgeeks.org/sort-vector-of-pairs-in-ascending-order-in-c/
+	std::sort(results.begin(), results.end(), sortbysec);
+
+	auto r1 = find_node_connections(graph2, 0, true);
+	auto r2 = find_node_connections(graph2, 0, false);
+	auto r3 = find_node_connections(graph2, 1, true);
+	auto r4 = find_node_connections(graph2, 1, false);
+	auto r5 = find_node_connections(graph2, 2, true);
+	auto r6 = find_node_connections(graph2, 2, false);
+	auto r7 = find_node_connections(graph2, 3, true);
+	auto r8 = find_node_connections(graph2, 3, false);
 
 	std::cout << "Done";
     return 0;
