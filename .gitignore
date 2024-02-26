@@ -1,5 +1,5 @@
 include/boost-1.84.0
-include/CXXGraph-3.1.0
+include/__CXXGraph-3.1.0
 scheduling/x64
 x64/Debug
 .vs
