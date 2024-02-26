@@ -48,7 +48,7 @@
       "t4": {
         "name": "task 2.4",
         "machine": "m3",
-        "processing_time": 6.5,
+        "processing_time": 6.0,
         "predecessor": "t3"
       }
     },

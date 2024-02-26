@@ -62,6 +62,13 @@ namespace sched {
 	}
 } // namespace sched
 
+/**
+   * \brief
+   * Function that return the incoming or outgoing Edges set of a node
+   *
+   * @returns a vector of Edges
+   *
+   */
 std::vector<CXXGraph::shared<const CXXGraph::Edge<int>>> find_edges(CXXGraph::shared<const CXXGraph::Node<int>> target_node, CXXGraph::T_EdgeSet<int> &edgeSet, bool incoming) {
 	std::vector<CXXGraph::shared<const CXXGraph::Edge<int>>> edges{};
 	CXXGraph::shared<const CXXGraph::Node<int>> temp_node;
@@ -80,8 +87,39 @@ std::vector<CXXGraph::shared<const CXXGraph::Edge<int>>> find_edges(CXXGraph::sh
 	return edges;
 }
 
+/**
+   * \brief
+   * Function that returns the Nodes from a vector of Edges depending on source or target connections
+   * - source nodes -> pass a `true`
+   * - target nodes -> pass a `false`
+   *
+   * @returns a vector of Nodes
+   *
+   */
+std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> get_nodes_from_edges(std::vector<CXXGraph::shared<const CXXGraph::Edge<int>>> vector_of_edges, bool source) {
+	std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> node_vector{};
+	for (auto& e : vector_of_edges) {
+		if (source) {
+			node_vector.push_back(e.get()->getNodePair().first);
+		}
+		else {
+			node_vector.push_back(e.get()->getNodePair().second);
+		}
+	}
+	return node_vector;
+}
+
+/**
+   * \brief
+   * Function that returns a Node vector of nodes that have n incoming/outgoing connections
+   * - incoming nodes -> pass a `true`
+   * - outgoing nodes -> pass a `false`
+   *
+   * @returns a vector of Nodes
+   *
+   */
 std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> find_node_connections(CXXGraph::Graph<int>& graph, int nr_of_edges, bool incoming) {
-	std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> node_list{};
+	std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> node_vector{};
 	auto edges = graph.getEdgeSet();
 	auto nodes = graph.getNodeSet();
 	// for each node, look if there is exactly one node as second in the nodepair
@@ -91,11 +129,70 @@ std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> find_node_connections(C
 		CXXGraph::shared<const CXXGraph::Node<int>> temp_node = n;
 		auto edges_vector = find_edges(temp_node, edges, incoming);
 		if (edges_vector.size() == nr_of_edges) {
-			node_list.push_back(n);
+			node_vector.push_back(n);
 		}
 	}
-	return node_list;
+	return node_vector;
 }
+
+/**
+   * \brief
+   * Function (helper) that all the starting nodes
+   *
+   * @returns a vector of Nodes
+   *
+   */
+std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> find_start_nodes(CXXGraph::Graph<int>& graph) {
+	return find_node_connections(graph, 0, true);
+}
+
+/**
+   * \brief
+   * Function (helper) that all the ending nodes
+   *
+   * @returns a vector of Nodes
+   *
+   */
+std::vector<CXXGraph::shared<const CXXGraph::Node<int>>> find_end_nodes(CXXGraph::Graph<int>& graph) {
+	return find_node_connections(graph, 0, false);
+}
+
+
+
+std::pair<CXXGraph::shared<const CXXGraph::Node<int>>, double> get_node_and_processing_time(std::vector<CXXGraph::Node<int>> nodelist, std::string node_id, std::vector<sched::task> tasklist) {
+	int node_graph_id = 0;
+	double processing_time = 0.0;
+	CXXGraph::Node<int> temp_node(" ", 0);
+	if ((node_id == "U") || (node_id == "V")) {
+		for (auto n : nodelist) {
+			if (n.getUserId() == node_id) {
+				temp_node = n;
+			}
+		}
+	}
+	else {
+		for (auto t : tasklist) {
+			if (t.id == node_id) {
+				temp_node = nodelist[t.graph_id];
+				processing_time = t.processing_time;
+			}
+		}
+	}
+
+	std::pair<CXXGraph::shared<const CXXGraph::Node<int>>, double> returnpair(make_shared<const CXXGraph::Node<int>>(temp_node), processing_time);
+	return returnpair;
+}
+
+double get_starttime_of_node(std::vector<std::pair<std::string, double>> node_starttime, std::string nodeid) {
+	double start_time = 0;
+	for (auto& p : node_starttime) {
+		if (p.first == nodeid) {
+			start_time = p.second;
+		}
+	}
+	return start_time;
+}
+
 
 int main()
 {
@@ -109,7 +206,7 @@ int main()
 
 	std::vector<sched::machine> machinelist;
 	auto j_machines = data["machines"];
-    for (auto m : data["machines"].items())
+    for (auto& m : data["machines"].items())
     {
 		sched::machine machine;
 		machine.id = m.key();
@@ -243,7 +340,7 @@ int main()
 	}
 
 	CXXGraph::T_EdgeSet<int> edgeSet;
-	for (auto e : edgelist) {
+	for (auto& e : edgelist) {
 		edgeSet.insert(make_shared<CXXGraph::DirectedWeightedEdge<int>>(e));
 		std::cout << e.getNodePair().first.get()->getUserId()
 			<< " --- " << e.getWeight()
@@ -252,7 +349,7 @@ int main()
 	CXXGraph::Graph<int> graph(edgeSet);
 
 	auto toposort = graph.topologicalSort();
-	for (auto s : toposort.nodesInTopoOrder) {
+	for (auto& s : toposort.nodesInTopoOrder) {
 		// print in tolological order
 		std::cout << s.getUserId() << std::endl;
 	}
@@ -265,7 +362,7 @@ int main()
 	auto bf = graph.bellmanford(nodeU, nodeV);
 	
 	CXXGraph::T_EdgeSet<int> edgeSet2;
-	for (auto e : edgelist) {
+	for (auto& e : edgelist) {
 		e.setWeight(e.getWeight() * -1.0);
 		edgeSet2.insert(make_shared<CXXGraph::DirectedWeightedEdge<int>>(e));
 	}
@@ -289,7 +386,7 @@ int main()
 	std::vector<std::string> endnodes_queue;
 	// first get all the nodes pointing to the end node
 	endnodes_queue.push_back(nodeV.getUserId());
-	for (auto es:graph2.getEdgeSet()) {
+	for (auto& es:graph2.getEdgeSet()) {
 		if (es.get()->getNodePair().second.get()->getData() == nodeV.getData()) {
 			auto w_1 = nodelist[es.get()->getNodePair().first.get()->getData()];
 			endnodes_queue.push_back(w_1.getUserId());
@@ -310,14 +407,14 @@ int main()
 	// is on the critical path
 
 	std::vector<std::string> copy_endnodes_queue = endnodes_queue;
-	for (auto curr_node : ns2) {
+	for (auto& curr_node : ns2) {
 		auto curr_node_user_id = curr_node.get()->getUserId();
 		for (int i = 0; i < copy_endnodes_queue.size(); i++) {
 			if (curr_node_user_id == copy_endnodes_queue[i]) {
 				CXXGraph::Node<int> temp_node("", 0);
 				double length_to_node = 0;
 				double temp_processing_time = 0;
-				for (auto t : tasklist) {
+				for (auto& t : tasklist) {
 					if (t.id == curr_node_user_id) {
 						temp_node = nodelist[t.graph_id];
 						temp_processing_time = -1.0 * t.processing_time;
@@ -369,7 +466,11 @@ int main()
 	// https://www.geeksforgeeks.org/sort-vector-of-pairs-in-ascending-order-in-c/
 	std::sort(results.begin(), results.end(), sortbysec);
 
+	// pass a true as last parameter for finding the number of incoming connection
+	//finding starting nodes
 	auto r1 = find_node_connections(graph2, 0, true);
+
+	//finding ending nodes
 	auto r2 = find_node_connections(graph2, 0, false);
 	auto r3 = find_node_connections(graph2, 1, true);
 	auto r4 = find_node_connections(graph2, 1, false);
@@ -378,6 +479,94 @@ int main()
 	auto r7 = find_node_connections(graph2, 3, true);
 	auto r8 = find_node_connections(graph2, 3, false);
 
-	std::cout << "Done";
+	auto starting = find_start_nodes(graph2);
+	for (auto& n : starting){
+		auto edges = graph.getEdgeSet();
+		auto outedges = find_edges(n, edges, false);
+		auto outnodes = get_nodes_from_edges(outedges, false);
+	}
+	
+	// working backwards from the end node
+	// assume one single (the first) critical path.
+	std::pair<std::vector<std::string>, double> crit_path{ {}, crit_path_length };
+	auto ending = find_end_nodes(graph2);
+	crit_path.first.push_back(ending[0].get()->getUserId());
+	std::vector<std::pair<std::vector<std::string>, double>> crit_paths{ crit_path };
+	// push node endpoint user id (string luke "j1t2" or "V" to critical path vector
+
+	if ((ending.size() == 1) && (starting.size() == 1)) {
+	
+		
+		for (int crit_path_it = 0; crit_path_it < crit_paths.size(); crit_path_it++) {
+		
+			//auto this_crit_path = crit_paths.at(crit_path_it);
+		
+			//auto edges = graph.getEdgeSet();
+			bool begin_reached = false;
+			// only for first critical path for now
+			auto node_and_procestime = get_node_and_processing_time(nodelist, crit_paths[crit_path_it].first.at(crit_paths[crit_path_it].first.size()-1), tasklist);
+			auto edges = graph2.getEdgeSet();
+			auto in_edges = find_edges(node_and_procestime.first, edges, true);
+			auto in_nodes = get_nodes_from_edges(in_edges, true);
+		
+			//now, put all the nodes up for consideration
+			while (begin_reached == false) {
+				// check if we have reached the starting node.
+				if (node_and_procestime.first == starting[0]) {
+					begin_reached = true;
+				}
+				// we are not at the starting node, so find out which edge + node weight are on the critical path
+				else {
+					// set a counter to detect a branch
+					int branch = 0;
+					// remember the current critical path time at this current node.
+					auto crit_path_time = crit_paths[crit_path_it].second;
+					for (auto& n : in_nodes) {
+						std::string nodeid = n.get()->getUserId();
+						auto curr_node = get_node_and_processing_time(nodelist, nodeid, tasklist);
+						double starttime = get_starttime_of_node(results, nodeid);
+						double procestime = -1.0 * curr_node.second;
+						if (starttime + procestime == crit_path_time) {
+							// if this is not the first path from the current node,
+							// copy the current critical path into a new critical path and pop the previous entry
+							// the sibling node from the previous branch
+							if (branch != 0) {
+								crit_paths.push_back(crit_paths[crit_path_it]);
+								crit_paths[crit_path_it + branch].first.pop_back();
+							}
+							// node is on path so add node to this critical path vector
+							crit_paths[crit_path_it + branch].first.push_back(nodeid);
+							// set the critical path time for next node
+							crit_paths[crit_path_it + branch].second = crit_path_time - procestime;
+							// adjust critical path length for the next node
+							branch++;
+						}
+					}
+					// resume with the current critical path
+					node_and_procestime = get_node_and_processing_time(nodelist, crit_paths[crit_path_it].first.at(crit_paths[crit_path_it].first.size() - 1), tasklist);
+					in_edges = find_edges(node_and_procestime.first, edges, true);
+					in_nodes = get_nodes_from_edges(in_edges, true);
+					// now we know which nodes have 'current_node' as endpoint
+				}
+
+			  // begin of the chain of nodes (U) forming this critical path
+			} // while (begin_reached == false)
+
+		  // iterating the critical paths vector
+		} //for (int crit_path_it = 0; crit_path_it < crit_paths.size(); crit_path_it++)
+
+	} // if ((ending.size() == 1) && (starting.size() == 1))
+
+	// print out the possible critical paths
+	for (int c = 0; c < crit_paths.size(); c++){
+		std::cout << "Critical path " << (c + 1) << std::endl;
+		for (int i = crit_paths[c].first.size() - 1; i >= 0; i--)
+		{
+			std::cout << crit_paths[c].first.at(i) << std::endl;
+		}
+		std::cout << std::endl;
+	}
+
+	std::cout << "Done" << std::endl;
     return 0;
 }
